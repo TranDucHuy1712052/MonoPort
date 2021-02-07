@@ -93,10 +93,6 @@ class DataLoader(object):
         worker_init_fn (callable, optional): If not ``None``, this will be called on each
             worker subprocess with the worker id (an int in ``[0, num_workers - 1]``) as
             input, after seeding and before data loading. (default: ``None``)
-
-                #ADDED BY HUY
-                persistent_workers: NOT YET KNOWN BUT NOT ADDING THIS CAUSE ERROR.
-
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
                  cannot be an unpicklable object, e.g., a lambda function. See
                  :ref:`multiprocessing-best-practices` on more details related
@@ -116,7 +112,7 @@ class DataLoader(object):
     def __init__(self, dataset, batch_size=1, shuffle=False, sampler=None,
                  batch_sampler=None, num_workers=0, collate_fn=None,
                  pin_memory=False, drop_last=False, timeout=0,
-                 worker_init_fn=None, multiprocessing_context=None, processors=[], persistent_workers=False):
+                 worker_init_fn=None, multiprocessing_context=None, processors=[]):
         torch._C._log_api_usage_once("python.data_loader")
 
         if num_workers < 0:
@@ -133,7 +129,6 @@ class DataLoader(object):
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
         self.processors = processors
-        self.persistent_workers=persistent_workers
 
         # Arg-check dataset related before checking samplers because we want to
         # tell users that iterable-style datasets are incompatible with custom
@@ -330,7 +325,6 @@ class _BaseDataLoaderIter(object):
         self._base_seed = torch.empty((), dtype=torch.int64).random_().item()
         self._num_yielded = 0
         self._processors = loader.processors
-        self._persistent_workers=loader.persistent_workers
 
     def __iter__(self):
         return self
@@ -700,7 +694,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # contains all `True`s if not using an iterable-style dataset
         # (i.e., if kind != Iterable).
         self._workers_status = []
-
         for i in range(self._num_workers):
             index_queue = multiprocessing_context.Queue()
             # index_queue.cancel_join_thread()
@@ -709,8 +702,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(self._dataset_kind, self._dataset, index_queue,
                       self._worker_result_queue, self._workers_done_event,
                       self._auto_collation, self._collate_fn, self._drop_last,
-                      self._base_seed + i, self._worker_init_fn, i, self._num_workers,
-                      self._persistent_workers))
+                      self._base_seed + i, self._worker_init_fn, i, self._num_workers))
             w.daemon = True
             # NB: Process.start() actually take some time as it needs to
             #     start a process and pass the arguments over via a pipe.

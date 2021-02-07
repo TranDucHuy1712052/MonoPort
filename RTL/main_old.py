@@ -70,9 +70,9 @@ parser.add_argument(
     '--port', type=str, default="5555")
 
 
-argv = sys.argv[1:sys.argv.index('++')]
+argv = sys.argv[1:sys.argv.index('--')]
 args = parser.parse_args(argv)
-opts = sys.argv[sys.argv.index('++') + 1:]
+opts = sys.argv[sys.argv.index('--') + 1:]
 
 cfg = get_cfg_defaults()
 if args.config_file is not None:
@@ -449,8 +449,6 @@ processors=[
                 data_dict["render_norm"],
                 data_dict["render_tex"])
         ))},
-
-    print("Process done")
 ]
 
 
@@ -460,10 +458,9 @@ processors=[
 loader = DataLoader(
     data_stream, 
     batch_size=1, 
-    num_workers=2, 
+    num_workers=1, 
     pin_memory=True,
     processors=processors,
-    persistent_workers=False,
 )
 
 
@@ -487,11 +484,9 @@ def main_loop():
         background = cv2.resize(background, (256, 256))
         return background
 
-    newTqdm = tqdm.tqdm(loader)
-    for data_dict in newTqdm:
-        
-        render_tex = data_dict["render_tex"] # [256, 256, 3] RGB
+    for data_dict in tqdm.tqdm(loader):
         render_norm = data_dict["render_norm"] # [256, 256, 3] RGB
+        render_tex = data_dict["render_tex"] # [256, 256, 3] RGB
         mask = data_dict["mask"]
         extrinsic = data_dict["extrinsic"]
         intrinsic = data_dict["intrinsic"]
